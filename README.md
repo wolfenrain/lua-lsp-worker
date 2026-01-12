@@ -5,6 +5,10 @@
 
 A Cloudflare Worker that provides [Lua Language Server](https://github.com/LuaLS/lua-language-server) functionality over WebSocket. Includes a web-based Monaco editor playground.
 
+## Live Demo
+
+Try it out at [lua.wolfenrain.dev](https://lua.wolfenrain.dev)
+
 ## Features
 
 - Full LSP support for Lua via WebSocket
