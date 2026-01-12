@@ -60,6 +60,9 @@
 			.status-indicator.disconnected {
 				background: #ef4444;
 			}
+			.status-indicator.idle {
+				background: #6b7280;
+			}
 			#editor-container {
 				flex: 1;
 				overflow: hidden;
@@ -212,6 +215,8 @@ end
 			}
 
 			// WebSocket LSP Client
+			const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
 			class LspClient {
 				constructor() {
 					this.ws = null;
@@ -220,17 +225,24 @@ end
 					this.documentVersion = 0;
 					this.documentUri = 'file:///workspace/playground.lua';
 					this.diagnosticsMarkers = [];
+					this.idleTimer = null;
+					this.isIdle = false;
+					this.lastContent = null;
 				}
 
 				connect() {
+					if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
+
 					const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 					const wsUrl = `${protocol}//${window.location.host}`;
 
 					updateStatus('', 'Connecting...');
+					this.isIdle = false;
 					this.ws = new WebSocket(wsUrl);
 
 					this.ws.onopen = () => {
 						updateStatus('connected', 'Connected');
+						this.resetIdleTimer();
 						this.initialize();
 					};
 
@@ -244,15 +256,53 @@ end
 					};
 
 					this.ws.onclose = () => {
-						updateStatus('disconnected', 'Disconnected');
-						// Try to reconnect after 3 seconds
-						setTimeout(() => this.connect(), 3000);
+						if (this.isIdle) {
+							updateStatus('idle', 'Idle - interact to reconnect');
+						} else {
+							updateStatus('disconnected', 'Disconnected');
+							// Try to reconnect after 3 seconds (unexpected disconnect)
+							setTimeout(() => this.connect(), 3000);
+						}
 					};
 
 					this.ws.onerror = (error) => {
 						console.error('WebSocket error:', error);
 						updateStatus('disconnected', 'Connection error');
 					};
+				}
+
+				disconnect() {
+					this.clearIdleTimer();
+					this.isIdle = true;
+					this.lastContent = editor.getValue();
+					if (this.ws) {
+						this.ws.close();
+						this.ws = null;
+					}
+				}
+
+				resetIdleTimer() {
+					this.clearIdleTimer();
+					this.idleTimer = setTimeout(() => {
+						console.log('Idle timeout reached, disconnecting...');
+						this.disconnect();
+					}, IDLE_TIMEOUT_MS);
+				}
+
+				clearIdleTimer() {
+					if (this.idleTimer) {
+						clearTimeout(this.idleTimer);
+						this.idleTimer = null;
+					}
+				}
+
+				onActivity() {
+					if (this.isIdle) {
+						// Reconnect on activity
+						this.connect();
+					} else {
+						this.resetIdleTimer();
+					}
 				}
 
 				sendRequest(method, params) {
@@ -407,20 +457,8 @@ end
 						// Send initialized notification
 						this.sendNotification('initialized', {});
 
-						// Open the document
+						// Open the document with current editor content
 						this.openDocument(editor.getValue());
-
-						// Set up editor change listener
-						editor.onDidChangeModelContent(() => {
-							this.documentVersion++;
-							this.sendNotification('textDocument/didChange', {
-								textDocument: {
-									uri: this.documentUri,
-									version: this.documentVersion,
-								},
-								contentChanges: [{ text: editor.getValue() }],
-							});
-						});
 
 						// Register completion provider
 						this.registerCompletionProvider();
@@ -604,6 +642,33 @@ end
 			// Start the LSP client
 			const lspClient = new LspClient();
 			lspClient.connect();
+
+			// Set up activity tracking
+			editor.onDidChangeModelContent(() => {
+				lspClient.onActivity();
+				if (lspClient.ws && lspClient.ws.readyState === WebSocket.OPEN) {
+					lspClient.documentVersion++;
+					lspClient.sendNotification('textDocument/didChange', {
+						textDocument: {
+							uri: lspClient.documentUri,
+							version: lspClient.documentVersion,
+						},
+						contentChanges: [{ text: editor.getValue() }],
+					});
+				}
+			});
+
+			// Track other activity events
+			editor.onDidFocusEditorWidget(() => lspClient.onActivity());
+			editor.onDidChangeCursorPosition(() => lspClient.onActivity());
+			document.getElementById('editor-container').addEventListener('click', () => lspClient.onActivity());
+
+			// Handle page visibility - disconnect when tab is hidden
+			document.addEventListener('visibilitychange', () => {
+				if (document.hidden) {
+					lspClient.disconnect();
+				}
+			});
 		</script>
 	</body>
 </html>
