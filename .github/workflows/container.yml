@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - "container/**"
-      - ".github/workflows/container.yml"
+      - 'container/**'
+      - '.github/workflows/container.yml'
   pull_request:
     branches: [main]
     paths:
-      - "container/**"
-      - ".github/workflows/container.yml"
+      - 'container/**'
+      - '.github/workflows/container.yml'
 
 env:
   CARGO_TERM_COLOR: always

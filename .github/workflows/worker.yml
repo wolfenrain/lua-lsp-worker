@@ -4,25 +4,25 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/**"
-      - "public/**"
-      - "test/**"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.json"
-      - "wrangler.jsonc"
-      - ".github/workflows/worker.yml"
+      - 'src/**'
+      - 'public/**'
+      - 'test/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'wrangler.jsonc'
+      - '.github/workflows/worker.yml'
   pull_request:
     branches: [main]
     paths:
-      - "src/**"
-      - "public/**"
-      - "test/**"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.json"
-      - "wrangler.jsonc"
-      - ".github/workflows/worker.yml"
+      - 'src/**'
+      - 'public/**'
+      - 'test/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'wrangler.jsonc'
+      - '.github/workflows/worker.yml'
 
 jobs:
   format:
@@ -32,8 +32,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
       - run: npm ci
       - run: npx prettier --check .
 
@@ -44,8 +44,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
       - run: npm ci
       - run: npx wrangler types
       - run: npx tsc --noEmit
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
       - run: npm ci
       - run: npm test

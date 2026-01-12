@@ -5,48 +5,46 @@ import worker, { LspBridgeContainer } from '../src/index';
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
 describe('Lua LSP Worker', () => {
-	describe('HTTP requests (non-WebSocket)', () => {
-		it('returns informational message for GET request (unit style)', async () => {
-			const request = new IncomingRequest('http://example.com');
+	describe('Static assets (non-WebSocket)', () => {
+		it('serves index.html for root path (unit style)', async () => {
+			const request = new IncomingRequest('http://example.com/');
 			const response = await worker.fetch(request, env);
 
 			expect(response.status).toBe(200);
-			expect(response.headers.get('Content-Type')).toBe('text/plain');
-			expect(await response.text()).toBe(
-				'Lua LSP Worker\n\nConnect via WebSocket to use the language server.'
-			);
+			expect(response.headers.get('Content-Type')).toContain('text/html');
+			const text = await response.text();
+			expect(text).toContain('<!doctype html>');
+			expect(text).toContain('Lua Language Server Playground');
 		});
 
-		it('returns informational message for GET request (integration style)', async () => {
-			const response = await SELF.fetch('https://example.com');
+		it('serves index.html for root path (integration style)', async () => {
+			const response = await SELF.fetch('https://example.com/');
 
 			expect(response.status).toBe(200);
-			expect(response.headers.get('Content-Type')).toBe('text/plain');
-			expect(await response.text()).toBe(
-				'Lua LSP Worker\n\nConnect via WebSocket to use the language server.'
-			);
+			expect(response.headers.get('Content-Type')).toContain('text/html');
+			const text = await response.text();
+			expect(text).toContain('Lua Language Server Playground');
 		});
 
-		it('returns informational message regardless of path', async () => {
-			const response = await SELF.fetch('https://example.com/any/path');
+		it('serves index.html directly when requested', async () => {
+			const response = await SELF.fetch('https://example.com/index.html');
 
 			expect(response.status).toBe(200);
-			expect(await response.text()).toBe(
-				'Lua LSP Worker\n\nConnect via WebSocket to use the language server.'
-			);
+			expect(response.headers.get('Content-Type')).toContain('text/html');
 		});
 
-		it('returns informational message for POST request without WebSocket upgrade', async () => {
-			const request = new IncomingRequest('http://example.com', {
-				method: 'POST',
-				body: 'test body',
-			});
+		it('returns 404 for non-existent paths', async () => {
+			const response = await SELF.fetch('https://example.com/does-not-exist.xyz');
+
+			expect(response.status).toBe(404);
+		});
+
+		it('rewrites root path to /index.html', async () => {
+			const request = new IncomingRequest('http://example.com/');
 			const response = await worker.fetch(request, env);
 
-			expect(response.status).toBe(200);
-			expect(await response.text()).toBe(
-				'Lua LSP Worker\n\nConnect via WebSocket to use the language server.'
-			);
+			const text = await response.text();
+			expect(text).toContain('monaco-editor');
 		});
 	});
 
@@ -58,12 +56,10 @@ describe('Lua LSP Worker', () => {
 				},
 			});
 
-			// Verify the header is correctly detected
 			expect(request.headers.get('Upgrade')).toBe('websocket');
 		});
 
 		it('routes WebSocket requests to unique container instances', async () => {
-			// Verify that each WebSocket connection gets a unique container ID
 			const id1 = env.LSP_CONTAINER.newUniqueId();
 			const id2 = env.LSP_CONTAINER.newUniqueId();
 
@@ -71,8 +67,6 @@ describe('Lua LSP Worker', () => {
 		});
 
 		it.skip('routes to container on WebSocket upgrade (requires container runtime)', async () => {
-			// This test requires container support which isn't available in vitest
-			// It's skipped but serves as documentation for expected behavior
 			const request = new IncomingRequest('http://example.com', {
 				headers: {
 					Upgrade: 'websocket',
@@ -84,21 +78,17 @@ describe('Lua LSP Worker', () => {
 	});
 
 	describe('LspBridgeContainer configuration', () => {
-		it('extends Container class', () => {
-			// LspBridgeContainer should extend the Container class
+		it('exports LspBridgeContainer class', () => {
 			expect(LspBridgeContainer).toBeDefined();
 			expect(typeof LspBridgeContainer).toBe('function');
 		});
 
 		it('defines defaultPort as 8080', () => {
-			// The class defines defaultPort = 8080
-			// We can verify this by checking the class definition exists and extends Container
 			const classSource = LspBridgeContainer.toString();
 			expect(classSource).toContain('defaultPort');
 		});
 
-		it('defines sleepAfter as 60000ms (1 minute)', () => {
-			// The class defines sleepAfter = 60000
+		it('defines sleepAfter timeout', () => {
 			const classSource = LspBridgeContainer.toString();
 			expect(classSource).toContain('sleepAfter');
 		});
@@ -107,6 +97,11 @@ describe('Lua LSP Worker', () => {
 	describe('Environment bindings', () => {
 		it('has LSP_CONTAINER durable object namespace', () => {
 			expect(env.LSP_CONTAINER).toBeDefined();
+		});
+
+		it('has ASSETS binding for static files', () => {
+			expect(env.ASSETS).toBeDefined();
+			expect(typeof env.ASSETS.fetch).toBe('function');
 		});
 
 		it('can create durable object IDs', () => {

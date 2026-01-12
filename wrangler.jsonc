@@ -1,36 +1,35 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "lua-lsp-worker",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-09-27",
-  "assets": {
-    "directory": "./public",
-    "binding": "ASSETS",
-    "html_handling": "none",
-    "not_found_handling": "none"
-  },
-  "observability": {
-    "enabled": true
-  },
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "LSP_CONTAINER",
-        "class_name": "LspBridgeContainer"
-      }
-    ]
-  },
-  "containers": [
-    {
-      "class_name": "LspBridgeContainer",
-      "image": "./Dockerfile",
-      "instance_type": "lite"
-    }
-  ],
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["LspBridgeContainer"]
-    }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "lua-lsp-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-09-27",
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		"html_handling": "none",
+		"not_found_handling": "none",
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "LSP_CONTAINER",
+				"class_name": "LspBridgeContainer",
+			},
+		],
+	},
+	"containers": [
+		{
+			"class_name": "LspBridgeContainer",
+			"image": "./Dockerfile",
+		},
+	],
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["LspBridgeContainer"],
+		},
+	],
 }
