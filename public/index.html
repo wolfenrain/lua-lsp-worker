@@ -228,6 +228,7 @@ end
 					this.idleTimer = null;
 					this.isIdle = false;
 					this.lastContent = null;
+					this.providersRegistered = false;
 				}
 
 				connect() {
@@ -460,14 +461,13 @@ end
 						// Open the document with current editor content
 						this.openDocument(editor.getValue());
 
-						// Register completion provider
-						this.registerCompletionProvider();
-
-						// Register hover provider
-						this.registerHoverProvider();
-
-						// Register signature help provider
-						this.registerSignatureHelpProvider();
+						// Register providers only once (they use this.sendRequest which works with any ws)
+						if (!this.providersRegistered) {
+							this.registerCompletionProvider();
+							this.registerHoverProvider();
+							this.registerSignatureHelpProvider();
+							this.providersRegistered = true;
+						}
 					} catch (error) {
 						console.error('Failed to initialize LSP:', error);
 						updateStatus('disconnected', 'Initialization failed');
